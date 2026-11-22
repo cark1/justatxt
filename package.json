@@ -23,7 +23,11 @@
       "target": "dir",
       "extendInfo": {
         "LSUIElement": true
-      }
+      },
+      "icon": "build/icon.png"
+    },
+    "directories": {
+      "buildResources": "build"
     }
   },
   "devDependencies": {
