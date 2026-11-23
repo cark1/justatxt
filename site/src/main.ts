@@ -26,7 +26,7 @@ const WELCOME = `# Start here
 - [ ] Every file is plain Markdown saved as .txt
 - [ ] Open it anywhere: TextEdit, Obsidian, VS Code
 - [ ] Lives in the menu bar and opens instantly
-- [ ] Download it for your Mac → [Just a txt](https://github.com/cark1/justatxt/releases/latest)
+- [ ] Download it for your Mac → [Just a txt](https://github.com/cark1/justatxt/releases/latest/download/Just-a-txt-mac.dmg)
 `
 
 /** The app's own todo list: what's done (hidden until you show completed) and what's next. */

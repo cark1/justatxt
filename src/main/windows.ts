@@ -266,21 +266,26 @@ async function onFsChange(p: string): Promise<void> {
 
 // ---------- quitting ----------
 
+/** Save every open file and remember the session; after this the app may quit without asking windows. */
+export async function prepareForQuit(): Promise<void> {
+  if (quitReady) return
+  saveSession()
+  quitting = true
+  await Promise.allSettled(
+    openDocs().map(async (d) => {
+      const c = await flush(d)
+      if (c.trim() === '') await deleteFile(d.path!)
+    })
+  )
+  quitReady = true
+}
+
 export function setupQuit(): void {
   app.on('before-quit', (e) => {
     if (quitReady) return
     e.preventDefault()
     if (quitting) return
-    saveSession()
-    quitting = true
-    const all = openDocs().map(async (d) => {
-      const c = await flush(d)
-      if (c.trim() === '') await deleteFile(d.path!)
-    })
-    void Promise.allSettled(all).then(() => {
-      quitReady = true
-      app.quit()
-    })
+    void prepareForQuit().then(() => app.quit())
   })
 }
 

@@ -461,6 +461,13 @@ body {
   filter: brightness(1.06);
 }
 
+.meta {
+  margin: 12px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--intro-muted);
+}
+
 .hint {
   margin: 18px 0 0;
   font-size: 13px;

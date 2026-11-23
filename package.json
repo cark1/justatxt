@@ -10,8 +10,8 @@
     "build": "electron-vite build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
-    "dist": "electron-vite build && electron-builder --mac",
-    "release": "electron-vite build && APPLE_KEYCHAIN_PROFILE=justatxt electron-builder --mac",
+    "dist": "electron-vite build && electron-builder --mac --publish never",
+    "release": "electron-vite build && (gh release view v$npm_package_version >/dev/null 2>&1 || gh release create v$npm_package_version --draft --title $npm_package_version --notes '') && APPLE_KEYCHAIN_PROFILE=justatxtnotarytool GH_TOKEN=$(gh auth token) electron-builder --mac --publish always",
     "site": "vite --config site/vite.config.mts",
     "site:build": "vite build --config site/vite.config.mts"
   },
@@ -27,8 +27,13 @@
         {
           "target": "dmg",
           "arch": [
-            "arm64",
-            "x64"
+            "universal"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "universal"
           ]
         }
       ],
@@ -36,15 +41,24 @@
         "LSUIElement": true
       },
       "icon": "build/icon.png",
-      "hardenedRuntime": true
+      "hardenedRuntime": true,
+      "artifactName": "Just-a-txt-mac-${version}.${ext}"
     },
     "directories": {
       "buildResources": "build"
     },
     "dmg": {
       "title": "${productName} ${version}",
-      "artifactName": "Just-a-txt-${version}-${arch}.${ext}"
-    }
+      "artifactName": "Just-a-txt-mac.${ext}"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "cark1",
+        "repo": "justatxt",
+        "releaseType": "draft"
+      }
+    ]
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
@@ -58,6 +72,7 @@
   "dependencies": {
     "@codemirror/commands": "^6.11.1",
     "@codemirror/state": "^6.7.6",
-    "@codemirror/view": "^6.43.15"
+    "@codemirror/view": "^6.43.15",
+    "electron-updater": "^6.8.11"
   }
 }

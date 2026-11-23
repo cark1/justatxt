@@ -3,6 +3,7 @@ import os from 'os'
 import path from 'path'
 import { dataDir, dataDirFor, listFiles } from './files'
 import { changeDataDir, newFile, openFile, openPaths } from './windows'
+import { checkForUpdatesNow, initUpdates, restartToUpdate, updateStatus } from './updates'
 
 let tray: Tray | null = null
 
@@ -89,6 +90,14 @@ function shortcutsMenu(): MenuItemConstructorOptions[] {
   ]
 }
 
+function updateItem(): MenuItemConstructorOptions {
+  const s = updateStatus()
+  if (s.kind === 'ready') return { label: `Restart to update to ${s.version}`, click: () => void restartToUpdate() }
+  if (s.kind === 'downloading') return { label: `Downloading update ${s.version}… ${s.percent}%`, enabled: false }
+  if (s.kind === 'checking') return { label: 'Checking for updates…', enabled: false }
+  return { label: 'Check for updates…', click: () => checkForUpdatesNow() }
+}
+
 async function buildMenu(): Promise<Menu> {
   const files = await listFiles().catch(() => [])
   const open = openPaths()
@@ -124,6 +133,7 @@ async function buildMenu(): Promise<Menu> {
       click: (mi) => app.setLoginItemSettings({ openAtLogin: mi.checked })
     },
     { type: 'separator' },
+    updateItem(),
     { label: 'Give feedback…', click: () => void shell.openExternal(FEEDBACK_MAILTO) },
     { type: 'separator' },
     { label: 'Quit Just a txt', accelerator: 'CmdOrCtrl+Q', click: () => app.quit() }
@@ -134,6 +144,12 @@ async function buildMenu(): Promise<Menu> {
 export function createTray(): void {
   tray = new Tray(icon())
   tray.setToolTip('Just a txt')
+  // a small dot next to the icon when an update is ready to install
+  initUpdates(() => {
+    const ready = updateStatus().kind === 'ready'
+    tray?.setTitle(ready ? '•' : '')
+    tray?.setToolTip(ready ? 'Just a txt — update ready' : 'Just a txt')
+  })
   const pop = async () => tray?.popUpContextMenu(await buildMenu())
   tray.on('click', () => void pop())
   tray.on('right-click', () => void pop())

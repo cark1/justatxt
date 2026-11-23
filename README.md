@@ -17,7 +17,8 @@ Editor minimale per macOS che vive nella menu bar. Ogni finestra è un file `.tx
 npm install
 npm run dev      # app in sviluppo (il renderer si apre anche su http://localhost:5173 con dati finti)
 npm test         # test della logica (parsing, spostamenti)
-npm run dist     # crea dist/mac-arm64/Just a txt.app
+npm run dist     # crea dist/Just-a-txt-mac.dmg (universale) senza firma
+npm run release  # firma, notarizza e carica una release bozza su GitHub
 ```
 
 ## Scorciatoie e interazioni
@@ -45,3 +46,11 @@ Chiudere una finestra salva; un file vuoto alla chiusura viene eliminato. L'elen
 - `src/main` — processo Electron: file su disco, finestre (con una finestra pre-caricata per l'apertura istantanea), tray, watcher delle modifiche esterne.
 - `src/preload` — bridge IPC.
 - `src/renderer/src/editor` — CodeMirror 6: `model.ts` (logica pura, testata), `decorations.ts` (resa), `commands.ts` (tastiera, incolla), `dragdrop.ts`.
+
+## Rilasciare una nuova versione
+
+1. Aumenta `version` in `package.json` (es. `0.2.0`).
+2. `npm run release` — firma con il certificato Developer ID, notarizza (profilo `justatxtnotarytool` di `notarytool`) e carica DMG, zip e `latest-mac.yml` in una **release bozza** su GitHub.
+3. Su GitHub controlla la bozza e pubblicala.
+
+Le app installate controllano gli aggiornamenti all'avvio e ogni 6 ore, li scaricano in background e li installano alla chiusura (o subito da "Restart to update" nel menu). Il sito scarica sempre `releases/latest/download/Just-a-txt-mac.dmg`.
