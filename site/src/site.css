@@ -1,0 +1,894 @@
+/* Site layer on top of the app's own stylesheet (which styles the window and editor). */
+
+:root {
+  --wall-a: #c9dcf5;
+  --wall-b: #f3d9e6;
+  --wall-c: #fbefd9;
+  --bar: rgba(255, 255, 255, 0.55);
+  --bar-fg: #1d1d1f;
+  --menu-bg: rgba(246, 246, 248, 0.97);
+  --intro-fg: #1d1d1f;
+  --intro-muted: #4a4a52;
+  --doc-bg: #ffffff;
+  --doc-fold: #e9e9ee;
+  --doc-line: #c7c7cf;
+  --doc-text: #b0b0ba;
+  --bin-body: rgba(255, 255, 255, 0.55);
+  --bin-line: #6e6e78;
+  --bin-rim: rgba(255, 255, 255, 0.8);
+  --hint: #e0561b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --wall-a: #1b2a44;
+    --wall-b: #3a2238;
+    --wall-c: #2c2418;
+    --bar: rgba(30, 30, 32, 0.55);
+    --bar-fg: #f2f2f4;
+    --menu-bg: rgba(44, 44, 48, 0.97);
+    --intro-fg: #f5f5f7;
+    --intro-muted: #c4c4cc;
+    --doc-bg: #f4f4f6;
+    --doc-fold: #d6d6dc;
+    --doc-line: #a9a9b2;
+    --doc-text: #9b9ba5;
+    --bin-body: rgba(255, 255, 255, 0.18);
+    --bin-line: #c9c9d1;
+    --bin-rim: rgba(255, 255, 255, 0.28);
+    --hint: #ffb347;
+  }
+}
+
+/* explicit choice (the website's appearance toggle) wins over the system setting */
+:root[data-theme='dark'] {
+  --wall-a: #1b2a44;
+  --wall-b: #3a2238;
+  --wall-c: #2c2418;
+  --bar: rgba(30, 30, 32, 0.55);
+  --bar-fg: #f2f2f4;
+  --menu-bg: rgba(44, 44, 48, 0.97);
+  --intro-fg: #f5f5f7;
+  --intro-muted: #c4c4cc;
+  --doc-bg: #f4f4f6;
+  --doc-fold: #d6d6dc;
+  --doc-line: #a9a9b2;
+  --doc-text: #9b9ba5;
+  --bin-body: rgba(255, 255, 255, 0.18);
+  --bin-line: #c9c9d1;
+  --bin-rim: rgba(255, 255, 255, 0.28);
+  --hint: #ffb347;
+}
+
+body {
+  background:
+    radial-gradient(60% 70% at 15% 20%, var(--wall-a), transparent 70%),
+    radial-gradient(55% 60% at 85% 30%, var(--wall-b), transparent 70%),
+    radial-gradient(70% 70% at 50% 100%, var(--wall-c), transparent 70%),
+    var(--wall-a);
+}
+
+/* ---------- menu bar ---------- */
+
+#menubar {
+  position: relative;
+  z-index: 20;
+  height: 28px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  font-size: 13px;
+  color: var(--bar-fg);
+  background: var(--bar);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  user-select: none;
+}
+
+.mb-left,
+.mb-right {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.mb-status {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.mb-status svg {
+  display: block;
+}
+
+.mb-btn {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 22px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+}
+
+/* show the moon in light mode (go dark), the sun in dark mode (go light) */
+#appearance .icon-sun,
+.is-dark #appearance .icon-moon {
+  display: none;
+}
+
+.is-dark #appearance .icon-sun {
+  display: block;
+}
+
+.mb-btn:hover,
+.mb-btn[aria-expanded='true'] {
+  background: rgba(127, 127, 127, 0.2);
+}
+
+/* ---------- making the [✓] icon discoverable ---------- */
+
+#tray.wiggle {
+  animation: wiggle 0.7s ease-in-out;
+}
+
+@keyframes wiggle {
+  0%,
+  100% {
+    transform: none;
+  }
+  15% {
+    transform: rotate(-16deg) scale(1.15);
+  }
+  30% {
+    transform: rotate(14deg) scale(1.15);
+  }
+  45% {
+    transform: rotate(-10deg) scale(1.1);
+  }
+  60% {
+    transform: rotate(8deg);
+  }
+  75% {
+    transform: rotate(-4deg);
+  }
+}
+
+#hint-arrow {
+  position: fixed;
+  z-index: 15;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  color: var(--hint);
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+
+#hint-arrow span {
+  margin-bottom: 4px;
+  font: 600 24px/1 'Caveat', 'Bradley Hand', 'Marker Felt', cursive;
+  white-space: nowrap;
+  transform: rotate(-4deg);
+}
+
+#hint-arrow.is-gone {
+  opacity: 0;
+}
+
+#hint-arrow[hidden] {
+  display: none;
+}
+
+#hint-arrow.wiggle svg {
+  animation: nudge 0.7s ease-in-out;
+}
+
+@keyframes nudge {
+  30%,
+  70% {
+    transform: translate(4px, -5px);
+  }
+  50% {
+    transform: translate(-1px, 1px);
+  }
+}
+
+/* ---------- menus (stand-ins for the native ones) ---------- */
+
+.menu {
+  position: absolute;
+  z-index: 30;
+  min-width: 220px;
+  padding: 5px;
+  border-radius: 9px;
+  background: var(--menu-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22), 0 0 0 0.5px rgba(0, 0, 0, 0.18);
+  font-size: 13px;
+}
+
+.menu a,
+.menu button {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 4px 10px 4px 24px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  position: relative;
+}
+
+.menu a:hover,
+.menu button:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.menu hr {
+  border: 0;
+  border-top: 1px solid rgba(127, 127, 127, 0.25);
+  margin: 5px 8px;
+}
+
+.menu .check {
+  position: absolute;
+  left: 8px;
+  visibility: hidden;
+}
+
+.menu [aria-checked='true'] .check {
+  visibility: visible;
+}
+
+#tray-menu {
+  top: 26px;
+  right: 70px;
+  min-width: 240px;
+}
+
+/* shortcut hints, right-aligned like native menus */
+.menu kbd {
+  margin-left: auto;
+  padding-left: 24px;
+  font: inherit;
+  color: var(--muted);
+}
+
+.menu a:hover kbd,
+.menu button:hover kbd {
+  color: inherit;
+}
+
+.menu-label {
+  padding: 4px 10px 2px 24px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.menu-info {
+  display: flex;
+  align-items: center;
+  padding: 3px 10px 3px 24px;
+  color: var(--fg);
+  white-space: nowrap;
+}
+
+.menu-info b {
+  font: 600 12px Menlo, ui-monospace, monospace;
+}
+
+/* submenus open to the left: the menu sits near the right edge of the screen */
+.has-sub {
+  position: relative;
+}
+
+.sub-trigger::after {
+  content: '›';
+  margin-left: auto;
+  padding-left: 24px;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.sub-trigger:hover::after {
+  color: inherit;
+}
+
+.submenu {
+  display: none;
+  top: -5px;
+  right: calc(100% + 2px);
+}
+
+.has-sub:hover > .submenu,
+.has-sub.open > .submenu {
+  display: block;
+}
+
+.has-sub:hover > .sub-trigger,
+.has-sub.open > .sub-trigger {
+  background: var(--accent);
+  color: #fff;
+}
+
+.submenu.shortcuts {
+  min-width: 300px;
+}
+
+/* the "it's a demo" notice, styled like a macOS notification */
+.toast {
+  position: fixed;
+  z-index: 40;
+  top: 36px;
+  right: 12px;
+  width: min(360px, calc(100vw - 24px));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--menu-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22), 0 0 0 0.5px rgba(0, 0, 0, 0.18);
+  color: var(--fg);
+  font-size: 13px;
+}
+
+.toast[hidden] {
+  display: none;
+}
+
+.toast.show {
+  animation: toast-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+@keyframes toast-in {
+  from {
+    transform: translateX(110%);
+  }
+}
+
+.toast strong {
+  display: block;
+  margin-bottom: 2px;
+}
+
+.toast p {
+  margin: 0;
+  line-height: 1.35;
+  color: var(--fg);
+  opacity: 0.85;
+}
+
+.toast-btn {
+  flex: none;
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+
+.more-menu {
+  top: 34px;
+  right: 8px;
+}
+
+/* ---------- desktop ---------- */
+
+#desktop {
+  position: relative;
+  /* own stacking context: windows raised above each other never cover the menu bar */
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(32px, 6vw, 96px);
+  /* extra room at the top for the hand-drawn hint under the menu bar icon */
+  padding: 110px 32px 32px;
+}
+
+.intro {
+  max-width: 360px;
+  color: var(--intro-fg);
+}
+
+.intro-icon {
+  display: block;
+  margin-bottom: 14px;
+}
+
+.intro h1 {
+  margin: 0;
+  font-size: 44px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
+.tagline {
+  margin: 12px 0 22px;
+  font-size: 19px;
+  line-height: 1.4;
+  color: var(--intro-muted);
+}
+
+.cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--intro-fg);
+  background: rgba(255, 255, 255, 0.45);
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.18);
+}
+
+.btn.primary {
+  color: #fff;
+  background: var(--accent);
+  box-shadow: none;
+}
+
+.btn:hover {
+  filter: brightness(1.06);
+}
+
+.hint {
+  margin: 18px 0 0;
+  font-size: 13px;
+  color: var(--intro-muted);
+}
+
+/* ---------- the app window ---------- */
+
+/* windows open inside this slot and cascade from its corner, like new macOS windows */
+#win-slot {
+  position: relative;
+  width: 420px;
+  height: min(620px, calc(100vh - 180px));
+  flex: none;
+}
+
+.window {
+  position: absolute;
+  width: 420px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  overflow: visible;
+  background: var(--bg);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28), 0 0 0 0.5px rgba(0, 0, 0, 0.25);
+}
+
+.window .editor {
+  overflow: hidden;
+  border-radius: 0 0 12px 12px;
+}
+
+.window .titlebar {
+  position: relative;
+  cursor: default;
+}
+
+.lights {
+  grid-column: 1;
+  display: flex;
+  gap: 8px;
+  padding-left: 14px;
+}
+
+.lights i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ff5f57;
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.15);
+}
+
+.lights button {
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #ff5f57;
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.15);
+}
+
+.lights i:nth-child(2) {
+  background: #febc2e;
+}
+
+.lights i:nth-child(3) {
+  background: #28c840;
+}
+
+/* ---------- the justatxt folder ---------- */
+
+.desk-icon {
+  position: absolute;
+  top: 22px;
+  right: 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 6px 4px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--intro-fg);
+  font: 600 12px -apple-system, BlinkMacSystemFont, sans-serif;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.desk-icon span {
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.desk-icon.is-selected svg {
+  filter: brightness(0.85);
+}
+
+.desk-icon.is-selected span {
+  background: var(--accent);
+  color: #fff;
+  text-shadow: none;
+}
+
+.finder {
+  position: absolute;
+  z-index: 5;
+  top: 110px;
+  right: 40px;
+  width: 360px;
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--fg);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28), 0 0 0 0.5px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.finder-bar {
+  position: relative;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 600 13px -apple-system, BlinkMacSystemFont, sans-serif;
+  border-bottom: 0.5px solid rgba(127, 127, 127, 0.25);
+}
+
+.finder-bar .lights {
+  position: absolute;
+  left: 0;
+}
+
+.finder-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 6px;
+  padding: 14px;
+}
+
+.file {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 4px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fg);
+  font: 12px -apple-system, BlinkMacSystemFont, sans-serif;
+  text-align: center;
+  word-break: break-word;
+}
+
+.file:hover {
+  background: var(--faint);
+}
+
+.file.is-open span {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--accent);
+  color: #fff;
+}
+
+.finder-hint {
+  margin: 0;
+  padding: 0 14px 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.file.is-dragged {
+  opacity: 0.35;
+}
+
+.file-ghost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 9000;
+  width: 96px;
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.desk-icon.drop-target svg {
+  transform: scale(1.12);
+  filter: drop-shadow(0 0 6px var(--accent));
+}
+
+.desk-icon svg {
+  transition: transform 0.12s;
+}
+
+.finder.drop-target {
+  box-shadow: 0 0 0 3px var(--accent), 0 20px 60px rgba(0, 0, 0, 0.28);
+}
+
+.desk-icon,
+.file {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+}
+
+.desk-icon *,
+.file * {
+  -webkit-user-drag: none;
+}
+
+.desk-file {
+  right: auto;
+  width: 96px;
+}
+
+.desk-file span {
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.desk-file.is-moving {
+  opacity: 0.85;
+}
+
+.trash-icon {
+  top: auto;
+  bottom: 22px;
+}
+
+.trash-icon .bin-full,
+.trash-icon.is-full .bin-empty {
+  display: none;
+}
+
+.trash-icon.is-full .bin-full {
+  display: block;
+}
+
+.trash-icon.bump svg {
+  animation: bump 0.35s ease-out;
+}
+
+@keyframes bump {
+  40% {
+    transform: scale(1.12) rotate(-3deg);
+  }
+}
+
+.trash-win {
+  top: auto;
+  bottom: 120px;
+}
+
+.bar-btn {
+  position: absolute;
+  right: 10px;
+  padding: 2px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--faint);
+  color: var(--fg);
+  font: 12px -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.bar-btn:disabled {
+  opacity: 0.4;
+}
+
+.textedit {
+  position: absolute;
+  z-index: 6;
+  top: 150px;
+  left: 18%;
+  width: 380px;
+  height: 420px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--fg);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28), 0 0 0 0.5px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.textedit[hidden] {
+  display: none;
+}
+
+.textedit textarea {
+  flex: 1;
+  width: 100%;
+  padding: 12px 16px;
+  border: 0;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: var(--fg);
+  font: 13px/1.5 Menlo, 'SF Mono', ui-monospace, monospace;
+}
+
+#tray-files:empty + hr {
+  display: none;
+}
+
+/* ---------- small screens: stack, let the page scroll ---------- */
+
+@media (max-width: 899px) {
+  html,
+  body {
+    overflow: auto;
+    height: auto;
+  }
+
+  .mb-left span,
+  .mb-status svg:first-child {
+    display: none;
+  }
+
+  #desktop {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 132px 16px 40px;
+    gap: 28px;
+  }
+
+  .intro {
+    max-width: none;
+  }
+
+  .intro h1 {
+    font-size: 36px;
+  }
+
+  #win-slot {
+    width: 100%;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .window {
+    position: relative;
+    left: auto !important;
+    top: auto !important;
+    width: 100%;
+    height: 72vh;
+  }
+
+  .desk-icon {
+    position: static;
+    align-self: flex-start;
+    order: -1;
+  }
+
+  /* narrow screens: menus fit the width, submenus unfold inline */
+  #tray-menu {
+    right: 8px;
+    max-width: calc(100vw - 16px);
+  }
+
+  .has-sub:hover > .submenu {
+    display: none;
+  }
+
+  .has-sub.open > .submenu {
+    display: block;
+    position: static;
+    min-width: 0;
+    margin: 2px 0 4px 12px;
+    box-shadow: none;
+    background: transparent;
+    backdrop-filter: none;
+  }
+
+  .menu-info {
+    white-space: normal;
+  }
+
+  /* narrow screens: label under a shorter arrow */
+  #hint-arrow {
+    flex-direction: column-reverse;
+    align-items: flex-end;
+  }
+
+  #hint-arrow svg {
+    width: 84px;
+    height: 64px;
+  }
+
+  #hint-arrow span {
+    margin: 0 40px 0 0;
+    font-size: 21px;
+  }
+
+  #desk-files {
+    order: -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  #desk-files:empty {
+    display: none;
+  }
+
+  .desk-file {
+    position: static;
+  }
+
+  .trash-icon {
+    order: 9;
+    align-self: flex-end;
+  }
+
+  .finder,
+  .textedit {
+    position: static;
+    width: 100%;
+    order: 0;
+  }
+
+  .textedit {
+    height: 340px;
+  }
+}

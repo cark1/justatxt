@@ -6,6 +6,8 @@ import { changeDataDir, newFile, openFile, openPaths } from './windows'
 
 let tray: Tray | null = null
 
+const FEEDBACK_MAILTO = `mailto:simonecarcone@gmail.com?subject=${encodeURIComponent('Just a txt feedback')}`
+
 /**
  * Menu bar icon: "[✓]", the markdown task syntax. 18pt template image (36px PNG @2x,
  * rendered from an SVG) so macOS tints it for light/dark menu bars.
@@ -121,6 +123,8 @@ async function buildMenu(): Promise<Menu> {
       enabled: app.isPackaged,
       click: (mi) => app.setLoginItemSettings({ openAtLogin: mi.checked })
     },
+    { type: 'separator' },
+    { label: 'Give feedback…', click: () => void shell.openExternal(FEEDBACK_MAILTO) },
     { type: 'separator' },
     { label: 'Quit Just a txt', accelerator: 'CmdOrCtrl+Q', click: () => app.quit() }
   ]

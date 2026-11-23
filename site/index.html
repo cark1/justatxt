@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Just a txt — todo lists in plain text</title>
+    <meta name="description" content="A tiny menu bar app for macOS that keeps grouped todo lists in plain .txt files. Try it live in your browser." />
+    <link rel="icon" href="/icon.png" />
+    <!-- keep the page hidden until the styles and the desktop are in place (no flash of raw icons) -->
+    <style>
+      body:not(.ready) { visibility: hidden; }
+    </style>
+    <script>
+      // apply the saved appearance before anything paints
+      try {
+        const t = localStorage.getItem('justatxt-demo-theme')
+        if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t
+      } catch {}
+    </script>
+    <noscript><style>body:not(.ready) { visibility: visible; }</style></noscript>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="menubar">
+      <div class="mb-left">
+        <strong>Just a txt</strong>
+        <span>File</span>
+        <span>Edit</span>
+        <span>Window</span>
+      </div>
+      <div class="mb-right">
+        <button id="tray" class="mb-btn" aria-label="Just a txt menu" aria-haspopup="menu">
+          <svg viewBox="0 0 18 18" width="16" height="16" aria-hidden="true">
+            <path d="M5.1 2.95H2.55v12.1h2.55M12.9 2.95h2.55v12.1h-2.55" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M5.65 9.25l2.2 2.2 4.55-5" fill="none" stroke="currentColor" stroke-width="1.95" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+        <button id="appearance" class="mb-btn" aria-label="Switch to dark mode" title="Switch to dark mode">
+          <svg class="icon-moon" viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M15.5 12.6A6.5 6.5 0 0 1 7.4 4.5a6.5 6.5 0 1 0 8.1 8.1z" fill="currentColor" /></svg>
+          <svg class="icon-sun" viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><circle cx="10" cy="10" r="3.6" fill="currentColor" /><path d="M10 1.8v2.2M10 16v2.2M1.8 10H4M16 10h2.2M4.2 4.2l1.6 1.6M14.2 14.2l1.6 1.6M4.2 15.8l1.6-1.6M14.2 5.8l1.6-1.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
+        </button>
+        <span class="mb-status" aria-hidden="true">
+          <svg viewBox="0 0 20 16" width="18" height="14"><path d="M3 6h3l4-3.5v11L6 10H3z" fill="currentColor" /><path d="M13 5.2a4 4 0 0 1 0 5.6M15.3 3a7 7 0 0 1 0 10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" /></svg>
+          <svg viewBox="0 0 20 16" width="18" height="14"><path d="M1.8 5.6a11.5 11.5 0 0 1 16.4 0M4.4 8.3a7.7 7.7 0 0 1 11.2 0M7 11a4 4 0 0 1 6 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" /><circle cx="10" cy="13.4" r="1.2" fill="currentColor" /></svg>
+          <svg viewBox="0 0 28 14" width="26" height="13"><rect x="1" y="1.5" width="22" height="11" rx="3.2" fill="none" stroke="currentColor" stroke-width="1.1" opacity="0.55" /><rect x="3" y="3.5" width="15" height="7" rx="1.6" fill="currentColor" /><path d="M24.8 5.2v3.6a1.9 1.9 0 0 0 0-3.6z" fill="currentColor" opacity="0.55" /></svg>
+        </span>
+        <span id="clock"></span>
+      </div>
+      <!-- same items as the real app's menu bar menu; what a website can't do shows a notice -->
+      <div id="tray-menu" class="menu" role="menu" hidden>
+        <button role="menuitem" data-action="new-file">New file<kbd>⌘N</kbd></button>
+        <hr />
+        <div id="tray-files"></div>
+        <hr />
+        <div class="has-sub">
+          <button role="menuitem" class="sub-trigger" aria-haspopup="menu">Folder</button>
+          <div class="menu submenu" role="menu">
+            <div class="menu-label">~/Desktop/justatxt</div>
+            <hr />
+            <button role="menuitem" data-action="open-folder">Show in Finder</button>
+            <button role="menuitem" data-action="demo">Change folder…</button>
+          </div>
+        </div>
+        <div class="has-sub">
+          <button role="menuitem" class="sub-trigger" aria-haspopup="menu">Shortcuts</button>
+          <div class="menu submenu shortcuts" role="menu">
+            <div class="menu-label">While typing</div>
+            <div class="menu-info"><span><b>#</b> at line start — new group</span></div>
+            <div class="menu-info"><span><b>[]</b> at line start — new item</span></div>
+            <div class="menu-info"><span><b>-&gt;</b> becomes →</span></div>
+            <div class="menu-info"><span>Paste a URL on selected text — link</span></div>
+            <div class="menu-info"><span>⌘-click a link — open it</span></div>
+            <hr />
+            <div class="menu-label">Keys</div>
+            <div class="menu-info"><span>New item (on an item or title)</span><kbd>↩</kbd></div>
+            <div class="menu-info"><span>New line inside an item</span><kbd>⇧↩</kbd></div>
+            <div class="menu-info"><span>Check / uncheck item</span><kbd>⌘↩</kbd></div>
+            <div class="menu-info"><span>Move item or group up</span><kbd>⌘↑</kbd></div>
+            <div class="menu-info"><span>Move item or group down</span><kbd>⌘↓</kbd></div>
+            <div class="menu-info"><span>Undo</span><kbd>⌘Z</kbd></div>
+            <div class="menu-info"><span>New file</span><kbd>⌘N</kbd></div>
+            <div class="menu-info"><span>Close window</span><kbd>⌘W</kbd></div>
+          </div>
+        </div>
+        <button role="menuitemcheckbox" data-action="demo" aria-checked="true"><span class="check">✓</span>Open at login</button>
+        <hr />
+        <a role="menuitem" href="https://github.com/cark1/justatxt/releases/latest">Download for Mac</a>
+        <a role="menuitem" href="https://github.com/cark1/justatxt">View on GitHub</a>
+        <button role="menuitem" data-action="reset">Reset the demo files</button>
+        <hr />
+        <a role="menuitem" href="mailto:simonecarcone@gmail.com?subject=Just%20a%20txt%20feedback">Give feedback…</a>
+        <hr />
+        <button role="menuitem" data-action="demo">Quit Just a txt<kbd>⌘Q</kbd></button>
+      </div>
+    </div>
+
+    <!-- hand-drawn hint pointing at the menu bar icon (positioned in main.ts) -->
+    <div id="hint-arrow" aria-hidden="true">
+      <span>your lists live up here</span>
+      <svg viewBox="0 0 120 90" width="120" height="90">
+        <path d="M6 80 C 40 82, 82 66, 100 14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+        <path d="M86 24 L 101 10 L 108 30" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </div>
+
+    <div id="toast" class="toast" role="status" hidden>
+      <img src="/icon.png" alt="" width="36" height="36" />
+      <div>
+        <strong>Just a txt</strong>
+        <p>Daiii, this is just a demo! Download the app if you really want to use it.</p>
+      </div>
+      <a class="toast-btn" href="https://github.com/cark1/justatxt/releases/latest">Download</a>
+    </div>
+
+    <div id="desktop">
+      <button id="folder" class="desk-icon" aria-label="Open the justatxt folder">
+        <svg viewBox="0 0 64 52" width="64" height="52" aria-hidden="true">
+          <path d="M3 8a4 4 0 0 1 4-4h16l6 6h28a4 4 0 0 1 4 4v4H3z" fill="#5aa9ef" />
+          <path d="M3 16h58v30a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z" fill="#7cc0f7" />
+          <path d="M3 16h58v3H3z" fill="#9ad1fb" />
+        </svg>
+        <span>justatxt</span>
+      </button>
+
+      <div id="finder" class="finder" hidden>
+        <header class="finder-bar">
+          <div class="lights"><button id="finder-close" aria-label="Close folder"></button><i></i><i></i></div>
+          <span>justatxt</span>
+        </header>
+        <div id="finder-grid" class="finder-grid"></div>
+        <p class="finder-hint">Every list is a plain .txt file. Click one to see what's inside.</p>
+      </div>
+
+      <div id="desk-files"></div>
+
+      <button id="trash" class="desk-icon trash-icon" aria-label="Open the Trash">
+        <svg class="bin-empty" viewBox="0 0 56 64" width="52" height="60" aria-hidden="true">
+          <path d="M9.5 16 L13.5 57.5 Q14 61 17.5 61 H38.5 Q42 61 42.5 57.5 L46.5 16" fill="var(--bin-body)" stroke="var(--bin-line)" stroke-width="1.2" stroke-linejoin="round" />
+          <path d="M17 23 L18.6 56 M22.6 23.5 L23.4 57 M28 23.6 V57.2 M33.4 23.5 L32.6 57 M39 23 L37.4 56" stroke="var(--bin-line)" stroke-width="1.1" stroke-linecap="round" opacity="0.4" />
+          <ellipse cx="28" cy="16" rx="18.5" ry="4" fill="var(--bin-rim)" stroke="var(--bin-line)" stroke-width="1.2" />
+          <ellipse cx="28" cy="16" rx="15.5" ry="2.4" fill="var(--bin-line)" opacity="0.28" />
+        </svg>
+        <svg class="bin-full" viewBox="0 0 56 64" width="52" height="60" aria-hidden="true">
+          <path d="M9.5 16 L13.5 57.5 Q14 61 17.5 61 H38.5 Q42 61 42.5 57.5 L46.5 16" fill="var(--bin-body)" stroke="var(--bin-line)" stroke-width="1.2" stroke-linejoin="round" />
+          <path d="M17 23 L18.6 56 M22.6 23.5 L23.4 57 M28 23.6 V57.2 M33.4 23.5 L32.6 57 M39 23 L37.4 56" stroke="var(--bin-line)" stroke-width="1.1" stroke-linecap="round" opacity="0.4" />
+          <ellipse cx="28" cy="16" rx="18.5" ry="4" fill="var(--bin-rim)" stroke="var(--bin-line)" stroke-width="1.2" />
+          <ellipse cx="28" cy="16" rx="15.5" ry="2.4" fill="var(--bin-line)" opacity="0.28" />
+          <path d="M18 16 C 17 9, 22 4, 27 6 C 30 2, 37 4, 37 10 C 41 11, 40 16, 38 16 Z" fill="var(--doc-bg)" stroke="var(--doc-line)" stroke-width="1.1" stroke-linejoin="round" />
+          <path d="M23 12 L 29 9 M 27 14 L 33 10" stroke="var(--doc-text)" stroke-width="1.1" stroke-linecap="round" />
+        </svg>
+        <span>Trash</span>
+      </button>
+
+      <div id="trash-win" class="finder trash-win" hidden>
+        <header class="finder-bar">
+          <div class="lights"><button id="trash-close" aria-label="Close Trash"></button><i></i><i></i></div>
+          <span>Trash</span>
+          <button id="trash-empty" class="bar-btn">Empty</button>
+        </header>
+        <div id="trash-grid" class="finder-grid"></div>
+        <p class="finder-hint" id="trash-hint">Click a file to put it back.</p>
+      </div>
+
+      <div id="textedit" class="textedit" hidden>
+        <header class="finder-bar">
+          <div class="lights"><button id="textedit-close" aria-label="Close"></button><i></i><i></i></div>
+          <span id="textedit-title">Untitled.txt</span>
+        </header>
+        <textarea id="textedit-body" spellcheck="false" aria-label="Plain text of the file"></textarea>
+      </div>
+
+      <section class="intro">
+        <img class="intro-icon" src="/icon.png" alt="" width="88" height="88" />
+        <h1>Just a txt</h1>
+        <p class="tagline">Grouped todo lists in plain&nbsp;.txt files. A&nbsp;tiny menu bar app for&nbsp;macOS.</p>
+        <div class="cta">
+          <a class="btn primary" href="https://github.com/cark1/justatxt/releases/latest">Download for Mac</a>
+          <a class="btn" href="https://github.com/cark1/justatxt">GitHub</a>
+        </div>
+        <p class="hint">The window is the real editor. Open your other lists from the [✓] menu in the menu bar.</p>
+      </section>
+
+      <!-- app windows open here, one per document (see main.ts) -->
+      <div id="win-slot"></div>
+    </div>
+
+    <template id="app-window">
+      <div class="window">
+        <header class="titlebar">
+          <div class="lights"><button class="close" aria-label="Close window"></button><i></i><i></i></div>
+          <div class="title-wrap">
+            <span class="title-text" title="Double-click to rename"></span>
+            <input class="title-input" spellcheck="false" autocomplete="off" aria-label="File name" hidden />
+          </div>
+          <div class="actions">
+            <button class="icon-btn more" title="More" aria-label="More" aria-haspopup="menu">
+              <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
+                <circle cx="5" cy="10" r="1.5" fill="currentColor" /><circle cx="10" cy="10" r="1.5" fill="currentColor" /><circle cx="15" cy="10" r="1.5" fill="currentColor" />
+              </svg>
+            </button>
+          </div>
+          <div class="menu more-menu" role="menu" hidden>
+            <button role="menuitem" data-action="rename">Rename</button>
+            <hr />
+            <button role="menuitemcheckbox" data-action="show-done" aria-checked="false"><span class="check">✓</span>Show completed</button>
+            <button role="menuitemcheckbox" data-action="pin" aria-checked="false"><span class="check">✓</span>Keep on top</button>
+            <hr />
+            <button role="menuitem" data-action="finder">Show in Finder</button>
+            <button role="menuitem" data-action="trash">Move to Trash</button>
+            <hr />
+            <button role="menuitem" data-action="close">Close</button>
+          </div>
+        </header>
+        <main class="editor"></main>
+      </div>
+    </template>
+
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
