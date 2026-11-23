@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 export interface Cmd {
   rid: number
-  type: 'load' | 'flush' | 'external'
+  type: 'load' | 'flush' | 'external' | 'rename' | 'set-show-done'
   payload: any
 }
 
@@ -19,7 +19,9 @@ const api = {
   newFile: () => ipcRenderer.send('new-file'),
   closeWindow: () => ipcRenderer.send('close-window'),
   openLink: (url: string) => ipcRenderer.send('open-link', url),
-  titleMenu: () => ipcRenderer.send('title-menu')
+  titleMenu: (state: { showDone: boolean }) => ipcRenderer.send('title-menu', state),
+  dragStart: () => ipcRenderer.send('drag-start'),
+  dragMove: () => ipcRenderer.send('drag-move')
 }
 
 export type Api = typeof api

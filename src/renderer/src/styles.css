@@ -56,7 +56,8 @@ body.is-dragging * {
   height: 40px;
   flex: none;
   display: grid;
-  grid-template-columns: 80px 1fr 80px;
+  /* equal side columns keep the title centred; left one clears the traffic lights */
+  grid-template-columns: 80px minmax(0, 1fr) 80px;
   align-items: center;
   -webkit-app-region: drag;
   user-select: none;
@@ -69,27 +70,33 @@ body.is-dragging * {
   min-width: 0;
 }
 
+/* The title is not a drag region (so it can take double-clicks); it moves the window itself. */
+#title-text,
 #title {
   -webkit-app-region: no-drag;
   font: 600 13px/1 -apple-system, BlinkMacSystemFont, sans-serif;
   color: var(--fg);
+  padding: 5px 4px;
+  min-width: 0;
+}
+
+#title-text {
   opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: default;
+}
+
+#title {
+  flex: 1;
+  text-align: center;
   background: transparent;
   border: 0;
-  border-radius: 6px;
-  padding: 5px 8px;
-  text-align: center;
-  width: 100%;
-  max-width: 320px;
   outline: none;
-  text-overflow: ellipsis;
 }
 
-#title:focus {
-  opacity: 1;
-}
-
-#title.error {
+#title-text.error {
   color: var(--danger);
   animation: shake 0.35s;
 }
@@ -109,7 +116,6 @@ body.is-dragging * {
   grid-column: 3;
   display: flex;
   justify-content: flex-end;
-  gap: 2px;
   padding-right: 10px;
 }
 
@@ -129,19 +135,6 @@ body.is-dragging * {
 .icon-btn:hover {
   background: var(--faint);
   color: var(--fg);
-}
-
-#toggle-done .tick {
-  opacity: 0.35;
-  transition: opacity 0.15s;
-}
-
-#toggle-done[aria-pressed='true'] {
-  color: var(--accent);
-}
-
-#toggle-done[aria-pressed='true'] .tick {
-  opacity: 1;
 }
 
 /* ---------- editor ---------- */

@@ -54,37 +54,91 @@ window.addEventListener('blur', () => loaded && void flush())
 
 // ---------- editor ----------
 
-const toggleBtn = document.getElementById('toggle-done') as HTMLButtonElement
-const syncToggle = (show: boolean) => {
-  toggleBtn.setAttribute('aria-pressed', String(show))
-  toggleBtn.title = show ? 'Hide completed' : 'Show completed'
-}
-
 const editor = createEditor(document.getElementById('editor')!, {
   onChange: scheduleSave,
-  onShowDoneChange: (show) => {
-    syncToggle(show)
-    writeShowDone(show)
-  },
+  onShowDoneChange: writeShowDone,
   newFile: () => api.newFile(),
   openLink: (url) => api.openLink(url)
 })
 
 if (import.meta.env.DEV) (window as any).__editor = editor
 
-toggleBtn.addEventListener('click', () => {
-  editor.setShowDone(!editor.getShowDone())
-  editor.view.focus()
-})
-
-document.getElementById('more')!.addEventListener('click', () => api.titleMenu())
+// "⋯" opens the native window menu (Rename, Show completed, Keep on top, Finder, Trash)
+document.getElementById('more')!.addEventListener('click', () => api.titleMenu({ showDone: editor.getShowDone() }))
 
 // ---------- title / rename ----------
+// The title is plain text you can drag the window by; rename with a double-click or ⋯ → Rename.
 
+const titleWrap = document.querySelector('.title-wrap') as HTMLElement
+const titleText = document.getElementById('title-text') as HTMLSpanElement
 const title = document.getElementById('title') as HTMLInputElement
 let currentName = ''
 
-title.addEventListener('focus', () => title.select())
+function showName(name: string) {
+  currentName = name
+  titleText.textContent = name
+  title.value = name
+  document.title = name
+}
+
+function startRename() {
+  titleWrap.classList.add('editing')
+  titleText.hidden = true
+  title.hidden = false
+  title.value = currentName
+  title.focus()
+  title.select()
+}
+
+function endRename() {
+  titleWrap.classList.remove('editing')
+  title.hidden = true
+  titleText.hidden = false
+}
+
+titleText.addEventListener('dblclick', startRename)
+
+/**
+ * Drag the window from the title and the titlebar buttons too: these can't be native drag
+ * regions (they need clicks/double-clicks), so they move the window themselves. A press that
+ * turns into a drag doesn't count as a click.
+ */
+function dragsWindow(el: HTMLElement) {
+  el.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return
+    const sx = e.screenX
+    const sy = e.screenY
+    let dragging = false
+    el.setPointerCapture(e.pointerId)
+    const move = (ev: PointerEvent) => {
+      if (!dragging && Math.hypot(ev.screenX - sx, ev.screenY - sy) < 4) return
+      if (!dragging) {
+        dragging = true
+        api.dragStart()
+      }
+      api.dragMove()
+    }
+    const up = () => {
+      el.removeEventListener('pointermove', move)
+      el.removeEventListener('pointerup', up)
+      el.removeEventListener('pointercancel', up)
+      if (dragging) {
+        const swallow = (ce: Event) => {
+          ce.preventDefault()
+          ce.stopImmediatePropagation()
+        }
+        el.addEventListener('click', swallow, { capture: true, once: true })
+        setTimeout(() => el.removeEventListener('click', swallow, { capture: true }), 0)
+      }
+    }
+    el.addEventListener('pointermove', move)
+    el.addEventListener('pointerup', up)
+    el.addEventListener('pointercancel', up)
+  })
+}
+
+for (const el of [titleText, ...document.querySelectorAll<HTMLElement>('#titlebar .icon-btn')]) dragsWindow(el)
+
 title.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     e.preventDefault()
@@ -96,23 +150,20 @@ title.addEventListener('keydown', (e) => {
 })
 title.addEventListener('blur', async () => {
   const next = title.value.trim()
-  if (!next || next === currentName) {
-    title.value = currentName
-    return
-  }
+  endRename()
+  if (!next || next === currentName) return
   await flush()
   const res = await api.rename(next)
   if (res.error || !res.name) {
-    title.value = currentName
-    title.classList.add('error')
-    title.title = res.error ?? ''
-    setTimeout(() => title.classList.remove('error'), 900)
+    titleText.classList.add('error')
+    titleText.title = res.error ?? ''
+    setTimeout(() => {
+      titleText.classList.remove('error')
+      titleText.title = 'Double-click to rename'
+    }, 1600)
     return
   }
-  currentName = res.name
-  title.value = res.name
-  title.title = ''
-  document.title = res.name
+  showName(res.name)
 })
 
 // ---------- commands from main ----------
@@ -123,19 +174,24 @@ api.onCmd(async (cmd: Cmd) => {
       const { name, content } = cmd.payload as { name: string; content: string }
       clearTimeout(timer)
       dirty = false
-      currentName = name
-      title.value = name
-      document.title = name
+      showName(name)
+      endRename()
       const show = readShowDone()
       editor.load(content, show)
       loaded = true
-      syncToggle(show)
       return true
     }
     case 'flush':
       return loaded ? flush() : null
     case 'external':
       editor.replaceExternal((cmd.payload as { content: string }).content)
+      return true
+    case 'rename':
+      startRename()
+      return true
+    case 'set-show-done':
+      editor.setShowDone(!!cmd.payload)
+      editor.view.focus()
       return true
   }
 })

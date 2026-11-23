@@ -28,6 +28,8 @@ export function devApi(): Api {
     newFile: () => console.log('[dev] new file'),
     closeWindow: () => {},
     openLink: (url) => console.log('[dev] open', url),
-    titleMenu: () => console.log('[dev] title menu')
+    titleMenu: () => console.log('[dev] title menu'),
+    dragStart: () => {},
+    dragMove: () => {}
   }
 }

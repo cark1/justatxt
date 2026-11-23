@@ -58,6 +58,35 @@ async function chooseFolder(): Promise<void> {
   }
 }
 
+/** Read-only cheat sheet shown as a submenu (items do nothing when clicked). */
+function shortcutsMenu(): MenuItemConstructorOptions[] {
+  const key = (label: string, accelerator: string): MenuItemConstructorOptions => ({
+    label,
+    accelerator,
+    registerAccelerator: false
+  })
+  const note = (label: string): MenuItemConstructorOptions => ({ label })
+  const head = (label: string): MenuItemConstructorOptions => ({ label, enabled: false })
+  return [
+    head('While typing'),
+    note('#  at line start — new group'),
+    note('[]  at line start — new item'),
+    note('->  becomes →'),
+    note('Paste a URL on selected text — link'),
+    note('⌘-click a link — open it'),
+    { type: 'separator' },
+    head('Keys'),
+    key('New item (on an item or title)', 'Enter'),
+    key('New line inside an item', 'Shift+Enter'),
+    key('Check / uncheck item', 'CmdOrCtrl+Enter'),
+    key('Move item or group up', 'CmdOrCtrl+Up'),
+    key('Move item or group down', 'CmdOrCtrl+Down'),
+    key('Undo', 'CmdOrCtrl+Z'),
+    key('New file', 'CmdOrCtrl+N'),
+    key('Close window', 'CmdOrCtrl+W')
+  ]
+}
+
 async function buildMenu(): Promise<Menu> {
   const files = await listFiles().catch(() => [])
   const open = openPaths()
@@ -84,6 +113,7 @@ async function buildMenu(): Promise<Menu> {
         { label: 'Change folder…', click: () => void chooseFolder() }
       ]
     },
+    { label: 'Shortcuts', submenu: shortcutsMenu() },
     {
       label: 'Open at login',
       type: 'checkbox',
@@ -104,3 +134,6 @@ export function createTray(): void {
   tray.on('click', () => void pop())
   tray.on('right-click', () => void pop())
 }
+
+// Dev-only: lets an inspector session check the menu builds.
+if (!app.isPackaged) (globalThis as any).__justatxtTray = { buildMenu }

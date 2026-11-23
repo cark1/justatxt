@@ -28,6 +28,8 @@ interface Doc {
   ready: Promise<void>
   closing: boolean
   lastContent: string
+  /** Always on top of other windows. */
+  pinned: boolean
 }
 
 const docs = new Map<number, Doc>()
@@ -76,6 +78,7 @@ function createDoc(): Doc {
     path: null,
     closing: false,
     lastContent: '',
+    pinned: false,
     ready: new Promise<void>((resolve) => readyResolvers.set(id, resolve))
   }
   docs.set(id, doc)
@@ -164,7 +167,7 @@ function place(doc: Doc, bounds?: Rectangle): void {
   }
 }
 
-export async function openFile(p: string, bounds?: Rectangle): Promise<void> {
+export async function openFile(p: string, bounds?: Rectangle, pinned = false): Promise<void> {
   const existing = findByPath(p)
   if (existing) return show(existing)
   const doc = takeSpare()
@@ -173,11 +176,18 @@ export async function openFile(p: string, bounds?: Rectangle): Promise<void> {
   lastWritten.set(p, content)
   doc.lastContent = content
   await doc.ready
-  await ask(doc, 'load', { path: p, name: displayName(p), content })
+  setPinned(doc, pinned)
+  await ask(doc, 'load', { path: p, name: displayName(p), content, pinned })
   place(doc, bounds)
   show(doc)
   saveSession()
   setTimeout(ensureSpare, 150)
+}
+
+/** Keep a window floating above all other apps' windows (like a sticky note). */
+function setPinned(doc: Doc, on: boolean): void {
+  doc.pinned = on
+  doc.win.setAlwaysOnTop(on, 'floating')
 }
 
 export async function newFile(): Promise<void> {
@@ -202,7 +212,7 @@ async function closeDoc(doc: Doc): Promise<void> {
 // ---------- session ----------
 
 interface Session {
-  windows: { path: string; bounds: Rectangle }[]
+  windows: { path: string; bounds: Rectangle; pinned?: boolean }[]
 }
 
 function saveSession(): void {
@@ -210,7 +220,7 @@ function saveSession(): void {
   const s: Session = {
     windows: openDocs()
       .filter((d) => d.win.isVisible())
-      .map((d) => ({ path: d.path!, bounds: d.win.getBounds() }))
+      .map((d) => ({ path: d.path!, bounds: d.win.getBounds(), pinned: d.pinned }))
   }
   void fs.writeFile(sessionFile(), JSON.stringify(s)).catch(() => {})
 }
@@ -222,7 +232,7 @@ export async function restoreSession(): Promise<void> {
   } catch {}
   for (const w of s.windows ?? []) {
     const exists = await fs.stat(w.path).then(() => true, () => false)
-    if (exists) await openFile(w.path, w.bounds)
+    if (exists) await openFile(w.path, w.bounds, !!w.pinned)
   }
 }
 
@@ -289,7 +299,7 @@ export function setupIpc(): void {
       const content = await readFile(doc.path)
       lastWritten.set(doc.path, content)
       doc.lastContent = content
-      await ask(doc, 'load', { path: doc.path, name: displayName(doc.path), content })
+      await ask(doc, 'load', { path: doc.path, name: displayName(doc.path), content, pinned: doc.pinned })
     }
   })
   ipcMain.on('reply', (_e, { rid, result }) => {
@@ -322,18 +332,52 @@ export function setupIpc(): void {
   })
 
   ipcMain.on('new-file', () => void newFile())
+
+  // window dragging by the title text (see renderer: the title isn't a native drag region).
+  // Uses the real cursor position, so the moving window never skews the deltas.
+  const dragOrigin = new Map<number, { win: [number, number]; cursor: Electron.Point }>()
+  ipcMain.on('drag-start', (e) => {
+    const doc = docOf(e)
+    if (doc) dragOrigin.set(doc.id, { win: doc.win.getPosition() as [number, number], cursor: screen.getCursorScreenPoint() })
+  })
+  ipcMain.on('drag-move', (e) => {
+    const doc = docOf(e)
+    const o = doc && dragOrigin.get(doc.id)
+    if (!o) return
+    const c = screen.getCursorScreenPoint()
+    doc.win.setPosition(o.win[0] + c.x - o.cursor.x, o.win[1] + c.y - o.cursor.y)
+  })
+
   ipcMain.on('close-window', (e) => docOf(e)?.win.close())
 
   ipcMain.on('open-link', (_e, url: string) => {
     if (/^(https?:|mailto:)/i.test(url)) void shell.openExternal(url)
   })
 
-  ipcMain.on('title-menu', (e) => {
+  ipcMain.on('title-menu', (e, state?: { showDone?: boolean }) => {
     const doc = docOf(e)
     if (!doc?.path) return
+    const send = (type: string, payload: unknown = null) => doc.win.webContents.send('cmd', { rid: 0, type, payload })
     Menu.buildFromTemplate([
-      { label: 'Show in Finder', click: () => shell.showItemInFolder(doc.path!) },
+      { label: 'Rename', click: () => send('rename') },
       { type: 'separator' },
+      {
+        label: 'Show completed',
+        type: 'checkbox',
+        checked: !!state?.showDone,
+        click: (mi) => send('set-show-done', mi.checked)
+      },
+      {
+        label: 'Keep on top',
+        type: 'checkbox',
+        checked: doc.pinned,
+        click: (mi) => {
+          setPinned(doc, mi.checked)
+          saveSession()
+        }
+      },
+      { type: 'separator' },
+      { label: 'Show in Finder', click: () => shell.showItemInFolder(doc.path!) },
       {
         label: 'Move to Trash',
         click: async () => {
@@ -381,4 +425,9 @@ export async function changeDataDir(next: string, moveExisting: boolean): Promis
 }
 
 // Dev-only hook so the main process can be exercised from an inspector session.
-if (!app.isPackaged) (globalThis as any).__justatxt = { changeDataDir, dataDir }
+if (!app.isPackaged)
+  (globalThis as any).__justatxt = {
+    changeDataDir,
+    dataDir,
+    docs: () => openDocs().map((d) => ({ path: d.path, pinned: d.pinned, onTop: d.win.isAlwaysOnTop() }))
+  }
